@@ -39,7 +39,7 @@ class Velik extends Joy {
 class App {
   constructor() {
     this.__getPosition();
-    form.addEventListener('submit', this.__submitForm.bind(this));
+    form.addEventListener('submit', this.__createObj.bind(this));
     inputType.addEventListener('change', this.__toggleSelect);
   }
 
@@ -67,6 +67,7 @@ class App {
   // metod -- creat form
   __showForm() {
     map.on('click', function (e) {
+      console.log('CLICK');
       eventMap = e;
       form.classList.remove('hidden');
       inputDistance.focus();
@@ -74,10 +75,8 @@ class App {
     });
   }
   // metod -- forma submit bolsa metka qoyish
-  __submitForm(e) {
-    e.preventDefault();
-
-    L.marker([eventMap.latlng.lat, eventMap.latlng.lng])
+  __submitForm(mashq) {
+    L.marker([mashq.coords[0], mashq.coords[1]])
       .addTo(map)
       .bindPopup(
         L.popup({
@@ -89,7 +88,6 @@ class App {
         }).setContent(`qayer`)
       )
       .openPopup();
-    this.__createObj();
     inputDistance.value =
       inputCadence.value =
       inputDuration.value =
@@ -115,7 +113,8 @@ class App {
 
   // forma malumotlarini Construktor orqali obyekt yaratish
 
-  __createObj() {
+  __createObj(e) {
+    e.preventDefault();
     let ex = '';
     const checkNum = (...inputs) => {
       return inputs.every(val => Number.isFinite(val));
@@ -128,10 +127,9 @@ class App {
     let duration = +inputDuration.value;
     let type = inputType.value;
     if (type === 'running') {
-      console.log('aa');
       let cadence = +inputCadence.value;
       if (
-        !checkNum(distance, duration, cadence) &&
+        !checkNum(distance, duration, cadence) ||
         !musbat(distance, duration, cadence)
       ) {
         return alert('Errorr!');
@@ -142,7 +140,7 @@ class App {
         [eventMap.latlng.lat, eventMap.latlng.lng],
         cadence
       );
-      console.log(ex);
+      this.__submitForm(ex);
     }
     if (type == 'cycling') {
       let cadence = inputElevation.value;
@@ -150,18 +148,18 @@ class App {
   }
 }
 
-function isIsogram(str) {
-  let s = str.toLowerCase();
-  for (let i = 0; i < s.length; i++) {
-    for (let j = i + 1; j < s.length; j++) {
-      if (s[i] == s[j]) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
+// function isIsogram(str) {
+//   let s = str.toLowerCase();
+//   for (let i = 0; i < s.length; i++) {
+//     for (let j = i + 1; j < s.length; j++) {
+//       if (s[i] == s[j]) {
+//         return false;
+//       }
+//     }
+//   }
+//   return true;
+// }
 
-console.log(isIsogram('saloms'));
+// console.log(isIsogram('saloms'));
 
 const magicMap = new App();
