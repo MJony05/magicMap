@@ -53,7 +53,7 @@ class Piyoda extends Joy {
     this._setTavsif();
   }
   calcTime() {
-    this.tezlik = this.distance / this.duration / 60;
+    this.tezlik = (this.distance / this.duration / 60).toFixed(2);
     return this.tezlik;
   }
 }
@@ -66,16 +66,18 @@ class Velic extends Joy {
     this._setTavsif();
   }
   calcSpeed() {
-    this.tezlik = this.distance / this.duration / 60;
+    this.tezlik = (this.distance / this.duration / 60).toFixed(2);
     return this.tezlik;
   }
 }
 
 class App {
+  #mashqlar = [];
   constructor() {
     this._getPosition();
     form.addEventListener('submit', this._createObject.bind(this));
     inputType.addEventListener('change', this._toggleSelect);
+    containerWorkouts.addEventListener('click', this._moveCenter.bind(this));
   }
   // Hozirgi ornimiz koordinatalarinin olish
   _getPosition() {
@@ -102,7 +104,26 @@ class App {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
+
+    // let yul = L.Routing.control({
+    //   waypoints: [L.latLng(latt, longg), L.latLng(latt + 0.01, longg + 0.01)],
+    //   lineOptions: {
+    //     styles: [{ color: 'green', opacity: 1, weight: 5 }],
+    //   },
+    // })
+    //   .on('routesfound', function (e) {
+    //     console.log(e.routes[0].summary.totalDistance);
+    //     console.log(e);
+    //   })
+    //   .addTo(map);
+    // console.log(e);
+
+    let btn = document.querySelector('.leaflet-control');
+    btn.addEventListener('click', function () {
+      btn.classList.toggle('leaflet-routing-container-hide');
+    });
     this._showForm();
+    this._getLocalStg();
   }
   // formani ochish
   _showForm() {
@@ -111,6 +132,15 @@ class App {
       form.classList.remove('hidden');
       inputDistance.focus();
     });
+  }
+  // forma toldirilgandan keyin uni ochirish
+  _hideForm() {
+    inputDistance.value =
+      inputDuration.value =
+      inputCadence.value =
+      inputElevation.value =
+        '';
+    form.classList.add('hidden');
   }
   // marker chiqarish
   _submitMap(mashq) {
@@ -124,19 +154,14 @@ class App {
           minWidth: 100,
           autoClose: true,
           closeOnClick: false,
-          className: 'running-popup',
+          className: `${mashq.type}-popup`,
         })
           .setLatLng([mashq.coords[0], mashq.coords[1]])
-          .setContent('Working')
+          .setContent(mashq.malumot)
           .openOn(map)
       )
       .openPopup();
-
-    inputDistance.value =
-      inputDuration.value =
-      inputCadence.value =
-      inputElevation.value =
-        '';
+    this._hideForm();
   }
   _toggleSelect() {
     inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
@@ -158,63 +183,122 @@ class App {
     if (type === 'running') {
       let cadance = +inputCadence.value;
       if (
-        !checkNumber(distance, duration, cadance) &&
+        !checkNumber(distance, duration, cadance) ||
         !checkPositive(distance, duration, cadance)
       ) {
         return alert('Musbat sonlarni kiriting');
       }
-      if (distance == 0 || duration == 0 || cadance == 0) {
-        return alert('Musbat sonlarni kiriting');
-      }
+      // if (distance == 0 || duration == 0 || cadance == 0) {
+      //   return alert("Musbat sonlarni kiriting");
+      // }
       mashq = new Piyoda(
         distance,
         duration,
         [mapEvent.latlng.lat, mapEvent.latlng.lng],
         cadance
       );
-
-      console.log(mashq);
     }
     if (type === 'cycling') {
-      let elevation = inputElevation.value;
-      let cadance = +inputCadence.value;
+      let elevation = +inputElevation.value;
       if (
-        !checkNumber(distance, duration, elevation) &&
-        !checkPositive(distance, duration)
+        !checkNumber(distance, duration, elevation) ||
+        !checkPositive(distance, duration, elevation)
       ) {
         return alert('Musbat sonlarni kiriting');
       }
-      if (distance == 0 || duration == 0 || cadance == 0) {
-        return alert('Musbat sonlarni kiriting');
-      }
+      // if (distance == 0 || duration == 0 || elevation == 0) {
+      //   return alert("Musbat sonlarni kiriting");
+      // }
       mashq = new Velic(
         distance,
         duration,
         [mapEvent.latlng.lat, mapEvent.latlng.lng],
         elevation
       );
-
-      console.log(mashq);
     }
     // Mashq obyektini Marker yasash uchun berish
     this._submitMap(mashq);
+
+    // Html ga formani chiqarish metodini chaqiramiz
+    this._renderList(mashq);
+
+    this.#mashqlar.push(mashq);
+
+    this._setLocalStg();
   }
 
   // Royxatni shakllantirish
   _renderList(obj) {
-    let html = `<li class="workout workout--running" data-id="1234567890">
-  <h2 class="workout__title">Running on April 14</h2>
+    let html = `<li class="workout workout--${obj.type}" data-id="${obj.id}">
+  <h2 class="workout__title">${obj.malumot}</h2>
   <div class="workout__details">
-    <span class="workout__icon">🏃‍♂️</span>
-    <span class="workout__value">5.2</span>
+    <span class="workout__icon">${obj.type === 'running' ? '🏃‍♂️' : '🚴‍♀️'}</span>
+    <span class="workout__value">${obj.distance}</span>
     <span class="workout__unit">km</span>
   </div>
   <div class="workout__details">
     <span class="workout__icon">⏱</span>
-    <span class="workout__value">24</span>
+    <span class="workout__value">${obj.duration}</span>
     <span class="workout__unit">min</span>
   </div>`;
+    if (obj.type === 'running') {
+      html += `<div class="workout__details">
+    <span class="workout__icon">⚡️</span>
+    <span class="workout__value">${obj.tezlik}</span>
+    <span class="workout__unit">min/km</span>
+  </div>
+  <div class="workout__details">
+    <span class="workout__icon">🦶🏼</span>
+    <span class="workout__value">${obj.cadance}</span>
+    <span class="workout__unit">spm</span>
+  </div>
+</li>`;
+    }
+    if (obj.type === 'cycling') {
+      html += `<div class="workout__details">
+    <span class="workout__icon">⚡️</span>
+    <span class="workout__value">${obj.tezlik}</span>
+    <span class="workout__unit">km/h</span>
+  </div>
+  <div class="workout__details">
+    <span class="workout__icon">⛰</span>
+    <span class="workout__value">${obj.elevation}</span>
+    <span class="workout__unit">m</span>
+  </div>
+</li>`;
+    }
+    form.insertAdjacentHTML('afterend', html);
+  }
+
+  _setLocalStg() {
+    localStorage.setItem('kalla', JSON.stringify(this.#mashqlar));
+  }
+
+  _getLocalStg() {
+    let data = JSON.parse(localStorage.getItem('kalla'));
+
+    if (!data) return;
+    this.#mashqlar = data;
+    this.#mashqlar.forEach(val => {
+      this._submitMap(val);
+      this._renderList(val);
+    });
+  }
+
+  _moveCenter(e) {
+    let el = e.target.closest('.workout');
+    console.log(el);
+    let objs = this.#mashqlar.find(val => {
+      return el.getAttribute('data-id') == val.id;
+    });
+    let coordina = objs.coords;
+    map.setView(coordina, 18, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
   }
 }
 
-const a = new App();
+const magicMap = new App();
